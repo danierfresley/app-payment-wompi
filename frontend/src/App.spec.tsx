@@ -14,6 +14,6 @@ describe('App', () => {
         <App />
       </Provider>,
     );
-    expect(screen.getByText('Atelier Norte')).toBeInTheDocument();
+    expect(screen.getByText('Tienda Danier')).toBeInTheDocument();
   });
 });

@@ -34,7 +34,7 @@ describe('ProductPage', () => {
     const store = createTestStore();
     renderWithStore(<ProductPage />, { store });
     expect(screen.getByText('Nova Pulse ANC')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /pay with credit card/i }));
+    await user.click(screen.getByRole('button', { name: /pagar con tarjeta de crédito/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 

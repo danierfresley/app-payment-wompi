@@ -49,6 +49,12 @@ export function StatusPage() {
   }
 
   const view = copy[transaction.status] ?? copy.PENDING;
+  const tone =
+    transaction.status === 'APPROVED'
+      ? 'ok'
+      : transaction.status === 'PENDING'
+        ? 'warning'
+        : 'error';
 
   const goHome = () => {
     dispatch(resetCheckout());
@@ -59,7 +65,7 @@ export function StatusPage() {
   };
 
   return (
-    <main className="page status-page">
+    <main className={`page status-page is-${tone}`}>
       <p className="eyebrow">Paso 4 de 4</p>
       <h1>{view.title}</h1>
       <p className="lead">{view.text}</p>

@@ -93,7 +93,7 @@ export function SummaryBackdrop() {
           <button type="button" className="btn ghost" onClick={() => dispatch(setStep('form'))}>
             Volver
           </button>
-          <button type="button" className="btn primary" onClick={onPay} disabled={paying}>
+          <button type="button" className="btn confirm" onClick={onPay} disabled={paying}>
             {paying ? 'Procesando…' : 'Pagar ahora'}
           </button>
         </div>

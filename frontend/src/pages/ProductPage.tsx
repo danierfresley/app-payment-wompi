@@ -41,7 +41,7 @@ export function ProductPage() {
   return (
     <main className="page">
       <header className="topbar">
-        <span className="mark">Atelier Norte</span>
+        <span className="mark">Tienda Danier</span>
         <span className="stock-pill">{product.stock} en stock</span>
       </header>
 
@@ -118,7 +118,7 @@ export function ProductPage() {
           disabled={soldOut}
           onClick={() => dispatch(setStep('form'))}
         >
-          {soldOut ? 'Sin stock' : 'Pay with credit card'}
+          {soldOut ? 'Sin stock' : 'Pagar con tarjeta de crédito'}
         </button>
       </div>
 

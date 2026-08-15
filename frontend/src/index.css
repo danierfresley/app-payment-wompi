@@ -1,13 +1,18 @@
 :root {
-  --paper: #f4efe6;
-  --ink: #1d1916;
-  --muted: #6b6259;
-  --line: #d9d0c4;
-  --accent: #c45c26;
-  --accent-ink: #fffaf4;
-  --front: #fffdf9;
-  --danger: #9b2c2c;
-  --shadow: 0 18px 40px rgba(29, 25, 22, 0.12);
+  --paper: #f3f4f6;
+  --ink: #1f2937;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #1565c0;
+  --accent-ink: #ffffff;
+  --front: #ffffff;
+  --confirm: #2e7d32;
+  --confirm-ink: #ffffff;
+  --danger: #c62828;
+  --danger-ink: #ffffff;
+  --warning: #fbc02d;
+  --warning-ink: #3e3200;
+  --shadow: 0 18px 40px rgba(31, 41, 55, 0.12);
   --page-pad: max(16px, env(safe-area-inset-left));
   --page-pad-right: max(16px, env(safe-area-inset-right));
   --page-pad-top: max(12px, env(safe-area-inset-top));
@@ -38,9 +43,7 @@ body,
 
 body {
   min-width: 320px;
-  background:
-    radial-gradient(circle at top right, #f8e6d4 0, transparent 36%),
-    var(--paper);
+  background: var(--paper);
 }
 
 img,
@@ -125,7 +128,7 @@ dd {
 .stock-pill,
 .chip,
 .brand-chip {
-  border: 1px solid var(--line);
+  border: 1px solid #57de7c;
   border-radius: 999px;
   padding: 6px 10px;
   background: var(--front);
@@ -137,7 +140,7 @@ dd {
   margin: 0 0 14px;
   border-radius: 20px;
   overflow: hidden;
-  background: #e7ddd1;
+  background: #e5e7eb;
   aspect-ratio: 5 / 4;
   max-height: min(42dvh, 320px);
 }
@@ -195,8 +198,8 @@ dd {
 
 .chip.is-on,
 .brand-chip.is-on {
-  border-color: var(--ink);
-  background: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent);
   color: var(--accent-ink);
 }
 
@@ -236,7 +239,7 @@ dd {
   min-width: var(--touch);
   min-height: var(--touch);
   border: 0;
-  background: #f3ece3;
+  background: var(--paper);
   font-size: 1.2rem;
 }
 
@@ -274,13 +277,20 @@ dd {
   color: var(--accent-ink);
 }
 
-.btn.primary:disabled {
+.btn.confirm {
+  background: var(--confirm);
+  color: var(--confirm-ink);
+}
+
+.btn.primary:disabled,
+.btn.confirm:disabled {
   opacity: 0.5;
 }
 
 .btn.ghost {
-  background: transparent;
+  background: var(--front);
   border: 1px solid var(--line);
+  color: var(--ink);
 }
 
 .overlay,
@@ -292,7 +302,7 @@ dd {
 }
 
 .overlay {
-  background: rgba(29, 25, 22, 0.46);
+  background: rgba(31, 41, 55, 0.46);
   display: flex;
   align-items: stretch;
   justify-content: center;
@@ -326,7 +336,7 @@ dd {
   width: var(--touch);
   height: var(--touch);
   border: 0;
-  background: #f3ece3;
+  background: var(--paper);
   border-radius: 50%;
   font-size: 1.5rem;
   line-height: 1;
@@ -390,8 +400,11 @@ dd {
 }
 
 .form-error {
-  color: var(--danger);
   margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--danger);
+  color: var(--danger-ink);
 }
 
 .form-actions {
@@ -405,8 +418,8 @@ dd {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  background: #2a211b;
-  color: #f6efe6;
+  background: #374151;
+  color: #f9fafb;
 }
 
 .backdrop-back {
@@ -462,6 +475,34 @@ dd {
   margin: 16px 0 24px;
 }
 
+.status-page.is-ok .status-card {
+  background: var(--confirm);
+  color: var(--confirm-ink);
+  border-color: transparent;
+}
+
+.status-page.is-ok .status-card div {
+  border-bottom-color: rgba(255, 255, 255, 0.28);
+}
+
+.status-page.is-error .status-card {
+  background: var(--danger);
+  color: var(--danger-ink);
+}
+
+.status-page.is-error .status-card div {
+  border-bottom-color: rgba(255, 255, 255, 0.28);
+}
+
+.status-page.is-warning .status-card {
+  background: var(--warning);
+  color: var(--warning-ink);
+}
+
+.status-page.is-warning .status-card div {
+  border-bottom-color: rgba(62, 50, 0, 0.18);
+}
+
 .status-card dd {
   text-align: right;
   max-width: 62%;
@@ -493,12 +534,34 @@ dd {
     padding-bottom: 32px;
   }
 
+  .btn {
+    width: auto;
+    min-width: 200px;
+    max-width: 280px;
+    padding-inline: 28px;
+  }
+
+  .buy-bar,
+  .form-actions,
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+  }
+
   .page .buy-bar {
     position: static;
     transform: none;
-    width: 100%;
+    width: auto;
+    max-width: 280px;
     padding: 16px 0 0;
     background: none;
+  }
+
+  .actions {
+    grid-template-columns: none;
   }
 
   .overlay {
