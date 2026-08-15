@@ -1,6 +1,6 @@
 # Product Checkout App
 
-SPA de checkout (React + Redux) y API hexagonal (NestJS) para comprar un producto con tarjeta tokenizada. El PAN nunca llega al backend.
+Tienda con checkout de tarjeta: React + Redux en el cliente y NestJS + PostgreSQL en el servidor. El número de tarjeta se tokeniza en el navegador y no se guarda en la API.
 
 ## Flujo (5 pasos)
 

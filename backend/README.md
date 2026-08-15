@@ -1,6 +1,6 @@
 # Checkout API
 
-API NestJS hexagonal. Instrucciones completas, modelo de datos, Swagger y cobertura están en el [README raíz](../README.md).
+API NestJS. El detalle de modelo, Swagger y cobertura está en el [README raíz](../README.md).
 
 ```bash
 cp .env.example .env
