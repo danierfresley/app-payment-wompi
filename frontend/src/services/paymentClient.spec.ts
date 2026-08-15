@@ -45,6 +45,25 @@ describe('paymentClient', () => {
         cardHolder: 'ANA',
       }),
     ).resolves.toBe('tok_1');
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)).toMatchObject({
+      exp_month: '12',
+      exp_year: '29',
+    });
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { id: 'tok_2' } }),
+    });
+    await expect(
+      tokenizeCard({
+        number: '4242424242424242',
+        cvc: '123',
+        expMonth: '12',
+        expYear: '2029',
+        cardHolder: 'ANA',
+      }),
+    ).resolves.toBe('tok_2');
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).exp_year).toBe('29');
 
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,

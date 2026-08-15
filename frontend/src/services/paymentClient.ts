@@ -53,7 +53,7 @@ export const tokenizeCard = async (input: CardTokenInput): Promise<string> => {
       number: input.number,
       cvc: input.cvc,
       exp_month: input.expMonth.padStart(2, '0'),
-      exp_year: input.expYear.length === 2 ? `20${input.expYear}` : input.expYear,
+      exp_year: input.expYear.slice(-2).padStart(2, '0'),
       card_holder: input.cardHolder,
     }),
   });

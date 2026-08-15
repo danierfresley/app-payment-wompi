@@ -10,15 +10,15 @@ import {
 
 export class CreateTransactionDto {
   @ApiProperty()
-  @IsUUID()
+  @IsUUID('loose')
   productId!: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsUUID('loose')
   customerId!: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsUUID('loose')
   deliveryId!: string;
 
   @ApiProperty({ example: 1 })

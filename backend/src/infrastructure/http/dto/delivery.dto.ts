@@ -3,7 +3,7 @@ import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
 export class CreateDeliveryDto {
   @ApiProperty()
-  @IsUUID()
+  @IsUUID('loose')
   customerId!: string;
 
   @ApiProperty()
