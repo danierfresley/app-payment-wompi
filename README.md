@@ -143,11 +143,11 @@ Repo → **Settings → Secrets and variables → Actions**:
 
 El primer apply tarda ~15–20 min (NAT, RDS, CloudFront). Al terminar, el resumen del job deja las URLs.
 
-URLs (llenar tras el primer deploy exitoso):
+URLs en vivo (us-east-2):
 
-- Frontend / API: _pendiente del workflow Deploy AWS_
-- Health: `_pendiente_/health`
-- Swagger: `_pendiente_/api/docs`
+- Frontend / API: [https://d3duf1tgrvivw8.cloudfront.net](https://d3duf1tgrvivw8.cloudfront.net)
+- Health: [https://d3duf1tgrvivw8.cloudfront.net/health](https://d3duf1tgrvivw8.cloudfront.net/health)
+- Swagger: [https://d3duf1tgrvivw8.cloudfront.net/api/docs](https://d3duf1tgrvivw8.cloudfront.net/api/docs)
 
 Costo aproximado mientras esté arriba: NAT Gateway + RDS `db.t3.micro` + ALB + ECS Fargate. Apaga o destruye con `terraform destroy` cuando no lo uses.
 
