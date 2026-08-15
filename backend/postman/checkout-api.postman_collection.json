@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "Product Checkout API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+    },
+    {
+      "name": "List products",
+      "request": { "method": "GET", "url": "{{baseUrl}}/products" }
+    },
+    {
+      "name": "Get product",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/products/11111111-1111-1111-1111-111111111111"
+      }
+    },
+    {
+      "name": "Get stock",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/stock/11111111-1111-1111-1111-111111111111"
+      }
+    },
+    {
+      "name": "Upsert customer",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Ana Perez\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"3001234567\",\n  \"documentType\": \"CC\",\n  \"documentNumber\": \"123456789\"\n}"
+        },
+        "url": "{{baseUrl}}/customers"
+      }
+    },
+    {
+      "name": "Create delivery",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"address\": \"Cra 7 # 12-34\",\n  \"city\": \"Bogota\",\n  \"region\": \"Cundinamarca\",\n  \"postalCode\": \"110111\"\n}"
+        },
+        "url": "{{baseUrl}}/deliveries"
+      }
+    },
+    {
+      "name": "Create transaction",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": \"11111111-1111-1111-1111-111111111111\",\n  \"customerId\": \"{{customerId}}\",\n  \"deliveryId\": \"{{deliveryId}}\",\n  \"quantity\": 1,\n  \"cardToken\": \"{{cardToken}}\",\n  \"last4\": \"4242\",\n  \"cardBrand\": \"visa\",\n  \"acceptanceToken\": \"{{acceptanceToken}}\",\n  \"acceptPersonalAuth\": \"{{acceptPersonalAuth}}\"\n}"
+        },
+        "url": "{{baseUrl}}/transactions"
+      }
+    },
+    {
+      "name": "Get transaction",
+      "request": { "method": "GET", "url": "{{baseUrl}}/transactions/{{transactionId}}" }
+    },
+    {
+      "name": "Sync transaction",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/transactions/{{transactionId}}/sync"
+      }
+    }
+  ],
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:3000" }]
+}
