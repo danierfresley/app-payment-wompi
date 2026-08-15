@@ -1,0 +1,217 @@
+name: Deploy AWS
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  TF_WORKING_DIR: infra
+  PROJECT: product-checkout
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend tests
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm test -- --coverage
+
+      - name: Frontend tests
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test -- --coverage
+
+  deploy:
+    name: Deploy us-east-2
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      TF_VAR_aws_region: us-east-2
+      TF_VAR_project: product-checkout
+      TF_VAR_db_username: checkout
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      TF_IN_AUTOMATION: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar secretos
+        run: |
+          missing=0
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "::error::Falta el secreto AWS_ACCESS_KEY_ID"
+            missing=1
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "::error::Falta el secreto AWS_SECRET_ACCESS_KEY"
+            missing=1
+          fi
+          if [ -z "${{ secrets.DB_PASSWORD }}" ]; then
+            echo "::error::Falta el secreto DB_PASSWORD"
+            missing=1
+          fi
+          if [ "$missing" -eq 1 ]; then
+            echo "Configúralos en Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+      - name: Claves de pago (secretos o sandbox del repo)
+        working-directory: backend
+        env:
+          SECRET_WOMPI_PUBLIC_KEY: ${{ secrets.WOMPI_PUBLIC_KEY }}
+          SECRET_WOMPI_PRIVATE_KEY: ${{ secrets.WOMPI_PRIVATE_KEY }}
+          SECRET_WOMPI_EVENTS_KEY: ${{ secrets.WOMPI_EVENTS_KEY }}
+          SECRET_WOMPI_INTEGRITY_KEY: ${{ secrets.WOMPI_INTEGRITY_KEY }}
+        run: |
+          set -a
+          # shellcheck disable=SC1091
+          . ./.env.example
+          set +a
+          {
+            echo "TF_VAR_wompi_public_key=${SECRET_WOMPI_PUBLIC_KEY:-$WOMPI_PUBLIC_KEY}"
+            echo "TF_VAR_wompi_private_key=${SECRET_WOMPI_PRIVATE_KEY:-$WOMPI_PRIVATE_KEY}"
+            echo "TF_VAR_wompi_events_key=${SECRET_WOMPI_EVENTS_KEY:-$WOMPI_EVENTS_KEY}"
+            echo "TF_VAR_wompi_integrity_key=${SECRET_WOMPI_INTEGRITY_KEY:-$WOMPI_INTEGRITY_KEY}"
+            echo "VITE_WOMPI_PUBLIC_KEY=${SECRET_WOMPI_PUBLIC_KEY:-$WOMPI_PUBLIC_KEY}"
+          } >> "$GITHUB_ENV"
+
+      - name: Configurar AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Bucket de estado Terraform
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          BUCKET="product-checkout-tfstate-${ACCOUNT_ID}-us-east-2"
+          if ! aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            aws s3api create-bucket \
+              --bucket "$BUCKET" \
+              --region "$AWS_REGION" \
+              --create-bucket-configuration LocationConstraint="$AWS_REGION"
+            aws s3api put-bucket-versioning \
+              --bucket "$BUCKET" \
+              --versioning-configuration Status=Enabled
+            aws s3api put-public-access-block \
+              --bucket "$BUCKET" \
+              --public-access-block-configuration \
+              BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+          fi
+          echo "TF_STATE_BUCKET=$BUCKET" >> "$GITHUB_ENV"
+          echo "AWS_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: infra
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=product-checkout/terraform.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="encrypt=true"
+
+      - name: Crear ECR
+        working-directory: infra
+        run: terraform apply -input=false -auto-approve -target=aws_ecr_repository.api
+
+      - name: Login ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Construir y publicar API
+        working-directory: backend
+        run: |
+          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PROJECT}"
+          docker build -t "${IMAGE_URI}:${GITHUB_SHA}" -t "${IMAGE_URI}:latest" .
+          docker push "${IMAGE_URI}:${GITHUB_SHA}"
+          docker push "${IMAGE_URI}:latest"
+          echo "TF_VAR_container_image=${IMAGE_URI}:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "IMAGE_URI=${IMAGE_URI}:${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Terraform apply
+        working-directory: infra
+        run: terraform apply -input=false -auto-approve
+
+      - name: Salidas de Terraform
+        working-directory: infra
+        run: |
+          {
+            echo "CLOUDFRONT_URL=$(terraform output -raw cloudfront_url)"
+            echo "CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id)"
+            echo "FRONTEND_BUCKET=$(terraform output -raw frontend_bucket)"
+            echo "ECS_CLUSTER=$(terraform output -raw ecs_cluster)"
+            echo "ECS_SERVICE=$(terraform output -raw ecs_service)"
+          } >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Construir frontend
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ env.CLOUDFRONT_URL }}
+          VITE_WOMPI_BASE_URL: https://api-sandbox.co.uat.wompi.dev/v1
+          VITE_BASE_FEE_CENTS: "350000"
+          VITE_DELIVERY_FEE_CENTS: "890000"
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publicar SPA en S3
+        run: |
+          aws s3 sync frontend/dist "s3://${FRONTEND_BUCKET}" --delete
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_ID" \
+            --paths "/*"
+
+      - name: Forzar nuevo deploy ECS
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --no-cli-pager
+
+      - name: Resumen
+        run: |
+          {
+            echo "## Deploy us-east-2"
+            echo ""
+            echo "- Frontend / API HTTPS: ${CLOUDFRONT_URL}"
+            echo "- Health: ${CLOUDFRONT_URL}/health"
+            echo "- Swagger: ${CLOUDFRONT_URL}/api/docs"
+            echo "- Imagen: ${IMAGE_URI}"
+          } >> "$GITHUB_STEP_SUMMARY"

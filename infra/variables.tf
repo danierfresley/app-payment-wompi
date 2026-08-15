@@ -1,6 +1,6 @@
 variable "aws_region" {
   type    = string
-  default = "us-east-1"
+  default = "us-east-2"
 }
 
 variable "project" {
@@ -19,7 +19,9 @@ variable "db_password" {
 }
 
 variable "frontend_origin" {
-  type = string
+  type        = string
+  default     = ""
+  description = "CORS origin. Vacío = URL de CloudFront."
 }
 
 variable "wompi_base_url" {
@@ -59,5 +61,6 @@ variable "delivery_fee_cents" {
 
 variable "container_image" {
   type        = string
-  description = "ECR image URI for the API"
+  default     = ""
+  description = "URI de la imagen en ECR. Vacío = <ecr>/latest."
 }

@@ -1,0 +1,3 @@
+bucket = "product-checkout-tfstate-ACCOUNT_ID-us-east-2"
+key    = "product-checkout/terraform.tfstate"
+region = "us-east-2"

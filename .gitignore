@@ -15,5 +15,6 @@ infra/.terraform
 infra/*.tfstate
 infra/*.tfstate.*
 infra/.terraform.lock.hcl
+infra/backend.config
 *.tfvars
 !infra/terraform.tfvars.example

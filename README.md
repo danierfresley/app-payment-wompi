@@ -2,6 +2,8 @@
 
 Tienda con checkout de tarjeta: React + Redux en el cliente y NestJS + PostgreSQL en el servidor. El número de tarjeta se tokeniza en el navegador y no se guarda en la API.
 
+**Repositorio:** [https://github.com/danierfresley/app-payment-wompi](https://github.com/danierfresley/app-payment-wompi)
+
 ## Flujo (5 pasos)
 
 1. Página de producto y stock
@@ -109,26 +111,45 @@ Resultado local más reciente:
 
 CI publica el reporte en cada PR (`.github/workflows/ci.yml`).
 
-## Deploy AWS
+## Deploy AWS (us-east-2)
 
-```bash
-cd infra
-cp terraform.tfvars.example terraform.tfvars
-# completar imagen ECR, secretos y origen del frontend
-terraform init
-terraform apply
-```
+El pipeline [Deploy AWS](https://github.com/danierfresley/app-payment-wompi/actions) crea la infra con Terraform y publica:
 
-Luego:
+- Frontend: S3 + CloudFront (HTTPS)
+- API: ECR → ECS Fargate → ALB, expuesta en HTTPS por el mismo CloudFront (`/products`, `/transactions`, `/health`, `/api/docs`, …)
 
-1. Construir y publicar la imagen del API (`backend/Dockerfile`) a ECR.
-2. `npm run build` en `frontend` y subir `dist/` al bucket S3.
-3. Invalidar CloudFront.
+### 1. Usuario IAM en AWS
 
-URLs (llenar tras el apply):
+En [us-east-2](https://us-east-2.console.aws.amazon.com/console/home?region=us-east-2) crea un usuario IAM con Access Key y permisos para ECR, ECS, S3, CloudFront, VPC, RDS, Secrets Manager, IAM (roles de ECS) y CloudWatch Logs. Para la prueba, `AdministratorAccess` es suficiente.
 
-- Frontend CloudFront: _pendiente de apply_
-- API ALB: _pendiente de apply_
+### 2. Secretos en GitHub
+
+Repo → **Settings → Secrets and variables → Actions**:
+
+| Secreto | Obligatorio | Uso |
+| --- | --- | --- |
+| `AWS_ACCESS_KEY_ID` | Sí | Access key del usuario IAM |
+| `AWS_SECRET_ACCESS_KEY` | Sí | Secret key del usuario IAM |
+| `DB_PASSWORD` | Sí | Password de RDS (mín. 8 caracteres) |
+| `WOMPI_PUBLIC_KEY` | No | Si falta, usa las llaves sandbox de `backend/.env.example` |
+| `WOMPI_PRIVATE_KEY` | No | Igual |
+| `WOMPI_EVENTS_KEY` | No | Igual |
+| `WOMPI_INTEGRITY_KEY` | No | Igual |
+
+### 3. Lanzar el deploy
+
+- Push a `main` o `develop`, o
+- Actions → **Deploy AWS** → **Run workflow**
+
+El primer apply tarda ~15–20 min (NAT, RDS, CloudFront). Al terminar, el resumen del job deja las URLs.
+
+URLs (llenar tras el primer deploy exitoso):
+
+- Frontend / API: _pendiente del workflow Deploy AWS_
+- Health: `_pendiente_/health`
+- Swagger: `_pendiente_/api/docs`
+
+Costo aproximado mientras esté arriba: NAT Gateway + RDS `db.t3.micro` + ALB + ECS Fargate. Apaga o destruye con `terraform destroy` cuando no lo uses.
 
 Headers OWASP: `helmet` en Nest y `aws_cloudfront_response_headers_policy` (HSTS, CSP, X-Frame-Options, nosniff).
 

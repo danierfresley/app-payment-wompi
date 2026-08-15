@@ -12,6 +12,11 @@ provider "aws" {
   region = var.aws_region
 }
 
+locals {
+  frontend_origin = var.frontend_origin != "" ? var.frontend_origin : "https://${aws_cloudfront_distribution.frontend.domain_name}"
+  container_image = var.container_image != "" ? var.container_image : "${aws_ecr_repository.api.repository_url}:latest"
+}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -146,7 +151,7 @@ resource "aws_db_subnet_group" "db" {
 resource "aws_db_instance" "postgres" {
   identifier              = "${var.project}-db"
   engine                  = "postgres"
-  engine_version          = "16.4"
+  engine_version          = "16"
   instance_class          = "db.t3.micro"
   allocated_storage       = 20
   db_name                 = "checkout"
@@ -159,15 +164,41 @@ resource "aws_db_instance" "postgres" {
   backup_retention_period = 1
 }
 
+resource "aws_ecr_repository" "api" {
+  name                 = var.project
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_ecr_lifecycle_policy" "api" {
+  repository = aws_ecr_repository.api.name
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep last 10 images"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 10
+      }
+      action = { type = "expire" }
+    }]
+  })
+}
+
 resource "aws_secretsmanager_secret" "app" {
-  name = "${var.project}/app"
+  name                    = "${var.project}/app"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "app" {
   secret_id = aws_secretsmanager_secret.app.id
   secret_string = jsonencode({
     DATABASE_URL         = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.address}:5432/checkout"
-    FRONTEND_ORIGIN      = var.frontend_origin
+    FRONTEND_ORIGIN      = local.frontend_origin
     WOMPI_BASE_URL       = var.wompi_base_url
     WOMPI_PUBLIC_KEY     = var.wompi_public_key
     WOMPI_PRIVATE_KEY    = var.wompi_private_key
@@ -254,7 +285,7 @@ resource "aws_ecs_task_definition" "api" {
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   container_definitions = jsonencode([{
     name      = "api"
-    image     = var.container_image
+    image     = local.container_image
     essential = true
     portMappings = [{
       containerPort = 3000
@@ -262,7 +293,7 @@ resource "aws_ecs_task_definition" "api" {
     }]
     environment = [
       { name = "PORT", value = "3000" },
-      { name = "FRONTEND_ORIGIN", value = var.frontend_origin }
+      { name = "FRONTEND_ORIGIN", value = local.frontend_origin }
     ]
     secrets = [
       { name = "DATABASE_URL", valueFrom = "${aws_secretsmanager_secret.app.arn}:DATABASE_URL::" },
@@ -304,7 +335,8 @@ resource "aws_ecs_service" "api" {
 }
 
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${var.project}-spa-${var.aws_region}"
+  bucket        = "${var.project}-spa-${var.aws_region}"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
@@ -359,6 +391,38 @@ resource "aws_cloudfront_distribution" "frontend" {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id                = "s3-frontend"
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
+  }
+  origin {
+    domain_name = aws_lb.api.dns_name
+    origin_id   = "alb-api"
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+  dynamic "ordered_cache_behavior" {
+    for_each = [
+      "/products*",
+      "/stock*",
+      "/customers*",
+      "/deliveries*",
+      "/transactions*",
+      "/webhooks*",
+      "/health*",
+      "/api*",
+    ]
+    content {
+      path_pattern               = ordered_cache_behavior.value
+      allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+      cached_methods             = ["GET", "HEAD", "OPTIONS"]
+      target_origin_id           = "alb-api"
+      viewer_protocol_policy     = "redirect-to-https"
+      cache_policy_id            = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+      origin_request_policy_id   = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+      response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
+    }
   }
   default_cache_behavior {
     allowed_methods            = ["GET", "HEAD"]

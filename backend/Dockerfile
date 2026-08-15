@@ -4,7 +4,8 @@ COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci
 COPY . .
-RUN npx prisma generate && npm run build
+RUN npx prisma generate && npm run build \
+  && npx tsc prisma/seed.ts --outDir dist/prisma --esModuleInterop --module commonjs --skipLibCheck
 
 FROM node:22-alpine
 WORKDIR /app
@@ -14,4 +15,4 @@ COPY prisma ./prisma
 RUN npm ci --omit=dev && npx prisma generate
 COPY --from=build /app/dist ./dist
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/prisma/seed.js && node dist/main.js"]
