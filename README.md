@@ -2,7 +2,7 @@
 
 Tienda con checkout de tarjeta: React + Redux en el cliente y NestJS + PostgreSQL en el servidor. El número de tarjeta se tokeniza en el navegador y no se guarda en la API.
 
-**Repositorio:** [https://github.com/danierfresley/app-payment-wompi](https://github.com/danierfresley/app-payment-wompi)
+**Repositorio:** [https://github.com/danierfresley/app-payment-gateway-integration](https://github.com/danierfresley/app-payment-gateway-integration)
 
 ## Flujo (5 pasos)
 
@@ -113,7 +113,7 @@ CI publica el reporte en cada PR (`.github/workflows/ci.yml`).
 
 ## Deploy AWS (us-east-2)
 
-El pipeline [Deploy AWS](https://github.com/danierfresley/app-payment-wompi/actions) crea la infra con Terraform y publica:
+El pipeline [Deploy AWS](https://github.com/danierfresley/app-payment-gateway-integration/actions) crea la infra con Terraform y publica:
 
 - Frontend: S3 + CloudFront (HTTPS)
 - API: ECR → ECS Fargate → ALB, expuesta en HTTPS por el mismo CloudFront (`/products`, `/transactions`, `/health`, `/api/docs`, …)
