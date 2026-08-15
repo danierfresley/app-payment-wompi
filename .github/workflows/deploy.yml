@@ -133,12 +133,20 @@ jobs:
       - name: Terraform init
         working-directory: infra
         run: |
-          terraform init \
-            -input=false \
-            -backend-config="bucket=${TF_STATE_BUCKET}" \
-            -backend-config="key=product-checkout/terraform.tfstate" \
-            -backend-config="region=${AWS_REGION}" \
-            -backend-config="encrypt=true"
+          for attempt in 1 2 3 4 5; do
+            if terraform init \
+              -input=false \
+              -backend-config="bucket=${TF_STATE_BUCKET}" \
+              -backend-config="key=product-checkout/terraform.tfstate" \
+              -backend-config="region=${AWS_REGION}" \
+              -backend-config="encrypt=true"; then
+              exit 0
+            fi
+            echo "terraform init falló (intento ${attempt}/5). Reintentando..."
+            sleep $((attempt * 15))
+          done
+          echo "terraform init falló tras 5 intentos (red de HashiCorp)"
+          exit 1
 
       - name: Crear ECR
         working-directory: infra
